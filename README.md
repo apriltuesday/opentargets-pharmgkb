@@ -103,9 +103,10 @@ drugs | List of drugs (see [below](#drug-representation)) | `[{"drugFromSource":
 pgxCategory | Pharmacogenomics phenotype category | `"toxicity"`
 phenotypeText | Phenotype name | `"Malignant Hyperthermia"`
 phenotypeFromSourceId | EFO ID of phenotype, mapped through ZOOMA / OXO | `"Orphanet_423"`
+variantAnnotation | List of variant annotations associated with this genotype | See [below](#variant-annotations)
 
 ### Example
-Below is an example of a complete clinical annotation evidence string:
+Below is an example of a complete clinical annotation evidence string, including variant annotation:
 ```
 {
   "datasourceId": "pharmgkb",
@@ -117,18 +118,32 @@ Below is an example of a complete clinical annotation evidence string:
     "11389482",
     "27857962"
   ],
-  "genotypeId": "19_38499645_GGAG_G,GGAG",
-  "variantRsId": "rs121918596",
-  "variantFunctionalConsequenceId": "SO_0001822",
-  "targetFromSourceId": "ENSG00000196218",
   "genotype": "del/GAG",
   "genotypeAnnotationText": "Patients with the rs121918596 del/GAG genotype may develop malignant hyperthermia when treated with volatile anesthetics (desflurane, enflurane, halothane, isoflurane, methoxyflurane, sevoflurane) and/or succinylcholine as compared to patients with the GAG/GAG genotype. Other genetic or clinical factors may also influence the risk for malignant hyperthermia.",
   "drugs": [
-    {"drugFromSource": "succinylcholine"}
+    {
+      "drugFromSource": "succinylcholine"
+    }
   ],
   "pgxCategory": "toxicity",
   "phenotypeText": "Malignant Hyperthermia",
-  "phenotypeFromSourceId": "Orphanet_423"
+  "phenotypeFromSourceId": "HP_0002047",
+  "genotypeId": "19_38499645_GGAG_G,GGAG",
+  "variantRsId": "rs121918596",
+  "variantFunctionalConsequenceId": "SO_0001624",
+  "targetFromSourceId": "ENSG00000173638",
+  "variantAnnotation": [
+    {
+      "directionality": "increased",
+      "effect": "risk of",
+      "entity": "Malignant Hyperthermia",
+      "baseAlleleOrGenotype": "del",
+      "comparisonAlleleOrGenotype": "GAG",
+      "literature": "27857962",
+      "effectDescription": "Allele del is associated with increased risk of Malignant Hyperthermia when treated with isoflurane or sevoflurane in children as compared to allele GAG.",
+      "effectType": "phenotype"
+    }
+  ]
 }
 ```
 Other examples can be found in the [tests](tests/resources/expected_output.json), though keep in mind these may not represent real data.
@@ -159,3 +174,11 @@ The `drugs` property is a list of structs with 2 keys:
 
 Lists of drugs are kept together (rather than exploded into separate evidence strings) when they're known to be annotated as a drug combination.
 Currently this is only when they're `/`-separated and associated with a single PGKB chemical ID, as in [ivacaftor / lumacaftor](https://www.pharmgkb.org/chemical/PA166152935).
+
+### Variant annotations
+
+Description of variant annotation
+
+Table of schema
+
+Association algorithm
