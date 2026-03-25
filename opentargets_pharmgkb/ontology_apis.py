@@ -1,9 +1,9 @@
 import logging
 from functools import lru_cache
 
-from cmat.trait_mapping.main import process_trait
 from cmat.trait_mapping.ols import get_uri_from_exact_match
 from cmat.trait_mapping.trait import Trait
+from cmat.trait_mapping.trait_processing import process_trait
 from requests import RequestException
 from retry import retry
 
@@ -33,13 +33,13 @@ def get_chebi_iri(drug_name):
 
 @lru_cache
 @retry(exceptions=(ConnectionError, RequestException), tries=4, delay=2, backoff=1.2, jitter=(1, 3))
-def get_efo_iri(phenotype_name):
+def get_efo_iri(phenotype_name, latest_mappings):
     if not phenotype_name:
         return None
 
     # Trait to store Zooma/OxO results - other attributes not used
     trait = Trait(phenotype_name, None, None)
-    processed_trait = process_trait(trait, zooma_filters, HOST, oxo_targets, oxo_distance,
+    processed_trait = process_trait(trait, latest_mappings, zooma_filters, oxo_targets, oxo_distance,
                                     ols_query_fields, ols_field_list, target_ontology, preferred_ontologies)
     if processed_trait.is_finished:
         efo_uris = [ontology_entry.uri for ontology_entry in processed_trait.finished_mapping_set]

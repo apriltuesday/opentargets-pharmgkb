@@ -1,0 +1,13 @@
+#generated-date=2026-01-21
+#ontology=EFO
+#clinvar_trait_name	uri	label
+cystic fibrosis	http://purl.obolibrary.org/obo/MONDO_0009061	cystic fibrosis
+dyslexia, susceptibility to, 1	http://www.ebi.ac.uk/efo/EFO_0005424	dyslexia
+hypertension	http://www.ebi.ac.uk/efo/EFO_0000537	hypertension
+leber congenital amaurosis 7	http://purl.obolibrary.org/obo/MONDO_0013449	Leber congenital amaurosis 7
+malignant hyperthermia	http://www.orpha.net/ORDO/Orphanet_423	Malignant hyperthermia of anesthesia
+methemoglobinemia	http://purl.obolibrary.org/obo/MONDO_0001117	methemoglobinemia
+multiple myeloma	http://www.ebi.ac.uk/efo/EFO_0001378	multiple myeloma
+neurodevelopmental disorder with epilepsy, spasticity, and brain atrophy	http://purl.obolibrary.org/obo/MONDO_0032894	neurodevelopmental disorder with epilepsy, spasticity, and brain atrophy
+neurodevelopmental disorder with seizures, spasticity, and complete or partial agenesis of the corpus callosum	http://purl.obolibrary.org/obo/MONDO_0859516	neurodevelopmental disorder with seizures, spasticity, and complete or partial agenesis of the corpus callosum
+poor head control	http://purl.obolibrary.org/obo/HP_0002421	Poor head control

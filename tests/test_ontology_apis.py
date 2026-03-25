@@ -9,9 +9,9 @@ def test_get_chebi_iri():
     assert get_chebi_iri('fluorouracil') is None
 
 
-def test_get_efo_iri():
+def test_get_efo_iri(mappings):
     # Exactly one high-confidence match
-    assert get_efo_iri('Lymphoma') == 'http://www.ebi.ac.uk/efo/EFO_0000574'
+    assert get_efo_iri('Lymphoma', mappings) == 'http://www.ebi.ac.uk/efo/EFO_0000574'
 
     # No high-confidence matches
-    assert get_efo_iri('neoplasms') is None
+    assert get_efo_iri('neoplasms', mappings) is None
