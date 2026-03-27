@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import multiprocessing
@@ -30,6 +31,9 @@ ID_COL_NAME = 'Summary Annotation ID'
 GENOTYPE_ALLELE_COL_NAME = 'Genotype/Allele'
 VARIANT_HAPLOTYPE_COL_NAME = 'Variant/Haplotypes'
 
+INVALID_EVIDENCE_FILE_NAME = 'invalid_evidence.json'
+REMOVED_MAPPINGS_FILE_NAME = 'removed_mappings.tsv'
+
 
 def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
     clinical_annot_path = os.path.join(data_dir, 'summary_annotations.tsv')
@@ -51,12 +55,16 @@ def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
     unified_var_ann_table = merge_variant_annotation_tables(read_tsv_to_df(var_drug_path),
                                                             read_tsv_to_df(var_pheno_path),
                                                             read_tsv_to_df(var_fa_path))
+    output_dir = os.path.dirname(output_path)
 
     # Load latest mappings, including filtering by json schema regex
     ot_schema_contents = get_ot_json_schema()
     ontology_id_regex = ot_schema_contents['properties']['phenotypeFromSourceId']['pattern']
     latest_mappings, _, nonmatching_mappings = load_ontology_mapping(mappings_path, ontology_id_regex)
-    # TODO count and output nonmatching mappings
+    if nonmatching_mappings:
+        with open(os.path.join(output_dir, REMOVED_MAPPINGS_FILE_NAME), 'w+') as outfile:
+            writer = csv.writer(outfile, delimiter='\t')
+            writer.writerows(sorted(list(nonmatching_mappings)))
 
     # Gather input counts
     counts = ClinicalAnnotationCounts()
@@ -123,22 +131,25 @@ def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
         for _, row in evidence_table.iterrows()
     ]
     # Validate and write
-    invalid_evidence = False
+    invalid_evidence_strings = []
     with open(output_path, 'w+') as output:
         for ev_string in evidence:
             if validate_evidence_string(ev_string, ot_schema_contents):
                 output.write(json.dumps(ev_string)+'\n')
             else:
-                # TODO output invalid evidence as well
-                invalid_evidence = True
+                counts.invalid_evidence += 1
+                invalid_evidence_strings.append(ev_string)
 
     # Final count report
     counts.report()
 
     # Exit with an error code if any invalid evidence is produced
     # Do this at the very end so we still output counts and any valid evidence strings.
-    if invalid_evidence:
+    if invalid_evidence_strings:
         logger.error('Invalid evidence strings occurred, please check the logs for the details')
+        with open(os.path.join(output_dir, INVALID_EVIDENCE_FILE_NAME), 'w+') as invalid_file:
+            for ev_string in invalid_evidence_strings:
+                invalid_file.write(json.dumps(ev_string) + '\n')
         sys.exit(1)
 
 

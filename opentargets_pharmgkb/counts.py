@@ -20,6 +20,7 @@ class ClinicalAnnotationCounts:
         self.exploded_phenotypes = 0
         # Output counts (after annotation and exploding)
         self.evidence_strings = 0
+        self.invalid_evidence = 0
         self.with_efo = 0
         self.with_consequence = 0
         self.with_target_gene = 0
@@ -51,6 +52,7 @@ class ClinicalAnnotationCounts:
         report_str += (f'\t\t4. Exploded by phenotype: '
                        f'{format_decimal(self.exploded_phenotypes, self.exploded_drugs)}\n')
         report_str += f'Total evidence strings: {self.evidence_strings}\n'
+        report_str += f'\tInvalid evidence: {self.invalid_evidence}\n'
         report_str += f'\tWith EFO phenotype: {format_percent(self.with_efo, self.evidence_strings)}\n'
         report_str += (f'\tWith functional consequence: '
                        f'{format_percent(self.with_consequence, self.evidence_strings)}\n')
