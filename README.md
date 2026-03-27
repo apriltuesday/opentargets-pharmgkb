@@ -70,7 +70,7 @@ generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --mappings $MAPPIN
 
 # One-liner for EVA on SLURM
 eva-sbatch pharmgkb-evidence -t 02:00:00 --mem=8G run \
-  ${CODE_ROOT}/env/bin/python ${CODE_ROOT}/bin/generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --mappings $MAPPINGS_PATH --created-date $CREATED_DATE --output-path evidence.json 
+  ${CODE_ROOT}/env/bin/python ${CODE_ROOT}/bin/generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --mappings $MAPPINGS_PATH --created-date $CREATED_DATE --output-path evidence.json
 ```
 
 ### 4. Manual follow-up actions
