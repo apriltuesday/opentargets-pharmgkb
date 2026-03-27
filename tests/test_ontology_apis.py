@@ -11,7 +11,7 @@ def test_get_chebi_iri():
 
 def test_get_efo_iri(mappings):
     # Exactly one high-confidence match
-    assert get_efo_iri('Lymphoma', mappings) == 'http://www.ebi.ac.uk/efo/EFO_0000574'
+    assert get_efo_iri('Lymphoma', mappings) == 'http://purl.obolibrary.org/obo/MONDO_0005062'
 
     # No high-confidence matches
     assert get_efo_iri('neoplasms', mappings) is None

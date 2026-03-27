@@ -53,7 +53,8 @@ def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
                                                             read_tsv_to_df(var_fa_path))
 
     # Load latest mappings, including filtering by json schema regex
-    ontology_id_regex = get_ot_json_schema()['properties']['phenotypeFromSourceId']['pattern']
+    ot_schema_contents = get_ot_json_schema()
+    ontology_id_regex = ot_schema_contents['properties']['phenotypeFromSourceId']['pattern']
     latest_mappings, _, nonmatching_mappings = load_ontology_mapping(mappings_path, ontology_id_regex)
     # TODO count and output nonmatching mappings
 
@@ -125,7 +126,7 @@ def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
     invalid_evidence = False
     with open(output_path, 'w+') as output:
         for ev_string in evidence:
-            if validate_evidence_string(ev_string):
+            if validate_evidence_string(ev_string, ot_schema_contents):
                 output.write(json.dumps(ev_string)+'\n')
             else:
                 # TODO output invalid evidence as well
