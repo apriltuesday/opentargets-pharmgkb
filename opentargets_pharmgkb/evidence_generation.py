@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import multiprocessing
@@ -11,11 +12,12 @@ import pandas as pd
 from cmat.consequence_prediction.common.biomart import query_biomart
 from cmat.consequence_prediction.snp_indel_variants.pipeline import process_variants
 from cmat.output_generation.consequence_type import get_so_accession_dict
+from cmat.trait_mapping.utils import load_ontology_mapping
 
 from opentargets_pharmgkb.counts import ClinicalAnnotationCounts
 from opentargets_pharmgkb.ontology_apis import get_efo_iri
-from opentargets_pharmgkb.pandas_utils import none_to_nan, split_and_explode_column, read_tsv_to_df, nan_to_empty
-from opentargets_pharmgkb.validation import validate_evidence_string
+from opentargets_pharmgkb.pandas_utils import none_to_nan, split_and_explode_column, read_tsv_to_df
+from opentargets_pharmgkb.validation import validate_evidence_string, get_ot_json_schema
 from opentargets_pharmgkb.variant_annotations import merge_variant_annotation_tables, get_variant_annotations, \
     DOE_COL_NAME, EFFECT_COL_NAME, OBJECT_COL_NAME, COMPARISON_COL_NAME, BASE_ALLELE_COL_NAME, PMID_COL_NAME, \
     VAR_ANN_SENTENCE_COL_NAME, ANNOTATION_TYPE_COL_NAME, VAR_ID_COL_NAME
@@ -29,8 +31,11 @@ ID_COL_NAME = 'Summary Annotation ID'
 GENOTYPE_ALLELE_COL_NAME = 'Genotype/Allele'
 VARIANT_HAPLOTYPE_COL_NAME = 'Variant/Haplotypes'
 
+INVALID_EVIDENCE_FILE_NAME = 'invalid_evidence.json'
+REMOVED_MAPPINGS_FILE_NAME = 'removed_mappings.tsv'
 
-def pipeline(data_dir, fasta_path, created_date, output_path):
+
+def pipeline(data_dir, fasta_path, mappings_path, created_date, output_path):
     clinical_annot_path = os.path.join(data_dir, 'summary_annotations.tsv')
     clinical_alleles_path = os.path.join(data_dir, 'summary_ann_alleles.tsv')
     clinical_evidence_path = os.path.join(data_dir, 'summary_ann_evidence.tsv')
@@ -50,6 +55,16 @@ def pipeline(data_dir, fasta_path, created_date, output_path):
     unified_var_ann_table = merge_variant_annotation_tables(read_tsv_to_df(var_drug_path),
                                                             read_tsv_to_df(var_pheno_path),
                                                             read_tsv_to_df(var_fa_path))
+    output_dir = os.path.dirname(output_path)
+
+    # Load latest mappings, including filtering by json schema regex
+    ot_schema_contents = get_ot_json_schema()
+    ontology_id_regex = ot_schema_contents['properties']['phenotypeFromSourceId']['pattern']
+    latest_mappings, _, nonmatching_mappings = load_ontology_mapping(mappings_path, ontology_id_regex)
+    if nonmatching_mappings:
+        with open(os.path.join(output_dir, REMOVED_MAPPINGS_FILE_NAME), 'w+') as outfile:
+            writer = csv.writer(outfile, delimiter='\t')
+            writer.writerows(sorted(list(nonmatching_mappings)))
 
     # Gather input counts
     counts = ClinicalAnnotationCounts()
@@ -68,7 +83,7 @@ def pipeline(data_dir, fasta_path, created_date, output_path):
     mapped_drugs = explode_drugs(exploded_pgx_cat)
     counts.exploded_drugs = len(mapped_drugs)
 
-    mapped_phenotypes = explode_and_map_phenotypes(mapped_drugs)
+    mapped_phenotypes = explode_and_map_phenotypes(mapped_drugs, latest_mappings)
     counts.exploded_phenotypes = len(mapped_phenotypes)
 
     with_rs, no_rs = split_df_with_or_without_rs(mapped_phenotypes)
@@ -116,21 +131,25 @@ def pipeline(data_dir, fasta_path, created_date, output_path):
         for _, row in evidence_table.iterrows()
     ]
     # Validate and write
-    invalid_evidence = False
+    invalid_evidence_strings = []
     with open(output_path, 'w+') as output:
         for ev_string in evidence:
-            if validate_evidence_string(ev_string):
+            if validate_evidence_string(ev_string, ot_schema_contents):
                 output.write(json.dumps(ev_string)+'\n')
             else:
-                invalid_evidence = True
+                counts.invalid_evidence += 1
+                invalid_evidence_strings.append(ev_string)
 
     # Final count report
     counts.report()
 
     # Exit with an error code if any invalid evidence is produced
     # Do this at the very end so we still output counts and any valid evidence strings.
-    if invalid_evidence:
+    if invalid_evidence_strings:
         logger.error('Invalid evidence strings occurred, please check the logs for the details')
+        with open(os.path.join(output_dir, INVALID_EVIDENCE_FILE_NAME), 'w+') as invalid_file:
+            for ev_string in invalid_evidence_strings:
+                invalid_file.write(json.dumps(ev_string) + '\n')
         sys.exit(1)
 
 
@@ -334,7 +353,7 @@ def explode_drugs(df):
     return split_drugs
 
 
-def explode_and_map_phenotypes(df):
+def explode_and_map_phenotypes(df, latest_mappings):
     """
     Maps phenotype text to EFO IRIs using Zooma. Explodes multiple phenotypes in single row.
 
@@ -343,9 +362,12 @@ def explode_and_map_phenotypes(df):
     """
     df['Phenotype(s)'].fillna('', inplace=True)
     split_phenotypes = split_and_explode_column(df, 'Phenotype(s)', 'split_phenotype')
-    with multiprocessing.Pool(processes=24) as pool:
+    with multiprocessing.Pool(processes=24) as pool, multiprocessing.Manager() as manager:
+        # Allow processes to share latest_mappings
+        mappings_dict = manager.dict()
+        mappings_dict.update(latest_mappings)
         str_to_iri = {
-            s: pool.apply(get_efo_iri, args=(s,))
+            s: pool.apply(get_efo_iri, args=(s, mappings_dict))
             for s in split_phenotypes['split_phenotype'].drop_duplicates().tolist()
         }
     mapped_phenotypes = pd.concat(
@@ -357,8 +379,7 @@ def explode_and_map_phenotypes(df):
 
 def iri_to_code(iri):
     """Convert iri (e.g. http://purl.obolibrary.org/obo/CHEBI_4792) to code, per Open Targets request."""
-    # Temporary workaround for MPATH terms until https://github.com/EBIvariation/CMAT/issues/417 is fixed
-    return iri.split('/')[-1] if iri and pd.notna(iri) and 'MPATH' not in iri else None
+    return iri.split('/')[-1] if iri and pd.notna(iri) else None
 
 
 def generate_clinical_annotation_evidence(so_accession_dict, created_date, row):

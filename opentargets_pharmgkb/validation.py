@@ -20,9 +20,10 @@ def get_ot_json_schema(version=OT_SCHEMA_VERSION):
     raise ValueError('Problem getting JSON schema')
 
 
-def validate_evidence_string(ev_string):
+def validate_evidence_string(ev_string, ot_schema_contents=None):
     try:
-        ot_schema_contents = get_ot_json_schema()
+        if not ot_schema_contents:
+            ot_schema_contents = get_ot_json_schema()
         jsonschema.validate(ev_string, ot_schema_contents, format_checker=jsonschema.FormatChecker())
         return True
     except jsonschema.exceptions.ValidationError as err:

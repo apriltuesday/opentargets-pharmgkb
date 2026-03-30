@@ -6,10 +6,9 @@ import pytest
 
 from opentargets_pharmgkb import evidence_generation
 from opentargets_pharmgkb.evidence_generation import get_functional_consequences, explode_drugs, \
-    read_tsv_to_df, explode_and_map_genes, get_genotype_ids, get_haplotype_ids
-from tests.conftest import fasta_path
-
-resources_dir = os.path.join(os.path.dirname(__file__), 'resources')
+    read_tsv_to_df, explode_and_map_genes, get_genotype_ids, get_haplotype_ids, INVALID_EVIDENCE_FILE_NAME, \
+    REMOVED_MAPPINGS_FILE_NAME
+from tests.conftest import fasta_path, resources_dir, mappings_path
 
 
 def test_get_genotype_ids():
@@ -93,6 +92,7 @@ def test_pipeline():
     evidence_generation.pipeline(
         data_dir=resources_dir,
         fasta_path=fasta_path,
+        mappings_path=mappings_path,
         created_date='2023-03-23',
         output_path=output_path
     )
@@ -100,8 +100,10 @@ def test_pipeline():
     with open(output_path) as test_output, open(expected_path) as expected_output:
         assert sorted(test_output.readlines()) == sorted(expected_output.readlines())
 
-    if os.path.exists(output_path):
-        os.remove(output_path)
+    for path in [output_path, os.path.join(resources_dir, INVALID_EVIDENCE_FILE_NAME),
+                 os.path.join(resources_dir, REMOVED_MAPPINGS_FILE_NAME)]:
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def test_pipeline_missing_file():
@@ -110,6 +112,7 @@ def test_pipeline_missing_file():
         evidence_generation.pipeline(
             data_dir=os.path.join(resources_dir, 'nonexistent'),
             fasta_path=fasta_path,
+            mappings_path=mappings_path,
             created_date='2023-03-23',
             output_path=output_path
         )

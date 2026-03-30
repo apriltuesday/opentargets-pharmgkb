@@ -25,6 +25,9 @@ export CODE_ROOT=
 # Path to GRCh38 RefSeq FASTA file
 export FASTA_PATH=
 
+# Path to latest ontology mappings file
+export MAPPINGS_PATH=
+
 # Required for Google Cloud upload
 export OT_BUCKET_NAME=
 export OT_CREDS_FILE=
@@ -63,11 +66,11 @@ export CREATED_DATE=`ls $DATA_DIR/CREATED*.txt | sed 's/.*\([0-9]\{4\}-[0-9]\{2\
 
 ### 3. Run the pipeline
 ```bash
-generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --created-date $CREATED_DATE --output-path evidence.json
+generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --mappings $MAPPINGS_PATH --created-date $CREATED_DATE --output-path evidence.json
 
 # One-liner for EVA on SLURM
-sbatch -t 02:00:00 --mem=8G -J pharmgkb-evidence -o pharmgkb-evidence.out -e pharmgkb-evidence.err \
-  --wrap="${CODE_ROOT}/env/bin/python ${CODE_ROOT}/bin/generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --created-date $CREATED_DATE --output-path evidence.json"
+eva-sbatch pharmgkb-evidence -t 02:00:00 --mem=8G run \
+  ${CODE_ROOT}/env/bin/python ${CODE_ROOT}/bin/generate_evidence.py --data-dir $DATA_DIR --fasta $FASTA_PATH --mappings $MAPPINGS_PATH --created-date $CREATED_DATE --output-path evidence.json
 ```
 
 ### 4. Manual follow-up actions
