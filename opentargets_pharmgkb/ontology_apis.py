@@ -51,9 +51,11 @@ def get_efo_iri(phenotype_name, latest_mappings):
         if len(efo_uris) > 1:
             # Don't expect multiple mappings for PharmGKB phenotypes
             logger.warning(f'Found multiple mappings for {phenotype_name}: {",".join(efo_uris)}')
+            mappings_cache[phenotype_name] = None
             return None
         mappings_cache[phenotype_name] = efo_uris[0]
         return efo_uris[0]
     else:
         logger.warning(f'Found no mappings for {phenotype_name}')
+        mappings_cache[phenotype_name] = None
         return None
