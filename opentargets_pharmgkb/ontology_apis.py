@@ -46,7 +46,8 @@ def get_efo_iri(phenotype_name, latest_mappings, ontology_id_regex):
     # Trait to store OLS/Zooma/OxO results - other attributes not used
     trait = Trait(phenotype_name, None, None)
     processed_trait = process_trait(trait, latest_mappings, zooma_filters, oxo_targets, oxo_distance,
-                                    ols_query_fields, ols_field_list, target_ontology, preferred_ontologies)
+                                    ols_query_fields, ols_field_list, target_ontology, preferred_ontologies,
+                                    with_candidates=False)
     efo_uris = [ontology_entry.uri for ontology_entry in processed_trait.finished_mapping_set]
     efo_uris = [uri for uri in efo_uris if re.match(ontology_id_regex, uri.split('/')[-1])]
     if efo_uris:
